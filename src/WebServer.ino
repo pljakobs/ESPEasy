@@ -126,7 +126,11 @@ void sendContentBlocking(String& data) {
   String size = String(data.length(), HEX) + "\r\n";
   // do chunked transfer encoding ourselves (WebServer doesn't support it)
   WebServer.sendContent(size);
-  if (data.length()) WebServer.sendContent(data);
+  if (data.length()) {
+    String log = String("content length:") + data.length();
+    addLog(LOG_LEVEL_DEBUG_DEV, log);
+    WebServer.sendContent(data);
+  }
   WebServer.sendContent("\r\n");
 #else  // ESP8266 2.4.0rc2 and higher and the ESP32 webserver supports chunked http transfer
   unsigned int timeout = 0;
@@ -3277,7 +3281,6 @@ void handle_login() {
 void handle_control() {
   //TXBuffer.startStream(true); // true= json
  // sendHeadandTail(F("TmplStd"),_HEAD);
-
   String webrequest = WebServer.arg(F("cmd"));
 
   // in case of event, store to buffer and return...
@@ -3296,12 +3299,15 @@ void handle_control() {
   printToWeb = true;
   printWebString = "";
 
+  String log = String("TempEvent: ") + TempEvent.Source + String(":") + TempEvent.ControllerIndex + String(" webrequest:") + webrequest;
+  addLog(LOG_LEVEL_DEBUG_DEV, log);
 
   if (PluginCall(PLUGIN_WRITE, &TempEvent, webrequest));
   else if (remoteConfig(&TempEvent, webrequest));
   else
     TXBuffer += F("Unknown or restricted command!");
-
+  log = String("Plugin response: ") + printWebString;
+  addLog(LOG_LEVEL_DEBUG_DEV, log);
   TXBuffer +=  printWebString;
 
   if (printToWebJSON)
